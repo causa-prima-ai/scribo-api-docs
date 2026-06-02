@@ -18,7 +18,6 @@
 - [FAQ](#faq)
 - [Resources](#resources)
 - [License](#license)
-- [Previous README](#previous-readme)
 
 ## What is Scribo?
 
@@ -45,12 +44,13 @@ _🎥 Demo video coming soon._
 
 ### Quickstart
 
-Generate an invoice with a single `POST` — no key required:
+Generate an invoice with a single `POST` — no key required. (First invoice for a sender email? Verify it first — see [the verification step](#setup--prerequisites) below.)
 
 ```sh
 curl -sS https://scribo.causaprima.ai/api/v1/invoices \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
+  -H "X-Email-Verification-Token: $TOKEN" \
   -d '{
     "sender": {
       "legal_name": "Example GmbH", "country_code": "DE",
@@ -60,7 +60,7 @@ curl -sS https://scribo.causaprima.ai/api/v1/invoices \
     "recipient": {
       "legal_name": "Acme GmbH", "country_code": "DE",
       "address_line1": "Hauptstrasse 1", "postcode": "10117", "city": "Berlin",
-      "tax_id": "DE987654321"
+      "tax_id": "DE987654321", "contact_email": "ap@acme.example"
     },
     "line_items": [
       { "description": "Senior consulting, 3 days", "quantity": "3",
@@ -90,6 +90,7 @@ Fetch the file from `download_url` — it's durable and re-downloadable any time
 
 - **Base URL (production):** `https://scribo.causaprima.ai`
 - **Auth:** none — the `/api/v1/*` API is anonymous. Send `Authorization: Bearer <key>` only if you have a partner key for elevated quotas.
+- **Verification (first invoice per sender):** the first invoice for each sender email must prove address ownership, or `POST /invoices` returns `401 email_verification_required`. Request a challenge (`POST /api/v1/scribo/email-verifications` with `{ "email": … }` — Scribo emails a 6-character code), redeem it (`POST …/{id}/redeem` with `{ "code": … }` → `{ verification_token }`), then send the token as `X-Email-Verification-Token`. One token covers ~30 minutes of invoices for that sender.
 - **Format:** JSON over HTTPS. Numeric fields (`quantity`, `unit_price`, `tax_rate`) are **strings** holding decimals — the API rejects floats, to preserve precision.
 - **Idempotency:** send an `Idempotency-Key` header — same key + same payload returns the original invoice, so retries are safe.
 - **Spec:** the canonical OpenAPI 3.1 document is at [`/api/v1/openapi.json`](https://scribo.causaprima.ai/api/v1/openapi.json) — generate typed clients with `openapi-typescript`, `oapi-codegen`, or any OpenAPI 3.1 tool.
@@ -98,7 +99,7 @@ Fetch the file from `download_url` — it's durable and re-downloadable any time
 
 ### How it works
 
-Four endpoints under `/api/v1/*`:
+Eight endpoints under `/api/v1/*`:
 
 | Method | Path | Description |
 |---|---|---|
@@ -106,6 +107,10 @@ Four endpoints under `/api/v1/*`:
 | `GET` | `/api/v1/invoices/{id}/download` | Stream the invoice file bytes. |
 | `GET` | `/api/v1/jurisdictions` | List supported jurisdictions and their formats. |
 | `GET` | `/api/v1/openapi.json` | The canonical OpenAPI 3.1 document. |
+| `POST` | `/api/v1/scribo/email-verifications` | Request a sender email-ownership challenge (uniform `202`, anti-enumeration). |
+| `POST` | `/api/v1/scribo/email-verifications/{id}/redeem` | Exchange the 6-character code for a `verification_token`. |
+| `GET` | `/api/v1/scribo/email-verifications/{id}` | Challenge status snapshot (polling fallback). |
+| `GET` | `/api/v1/scribo/email-verifications/{id}/events` | SSE stream of challenge events. |
 
 The output format is chosen by a deterministic priority chain (e.g. a `recipient.leitweg_id` selects German XRechnung); see [jurisdictions](https://scribo.causaprima.ai/docs/jurisdictions). To re-download, use the `download_url` from the create response as-is — it's durable. (A metadata re-fetch at `GET /api/v1/invoices/{id}` is deferred in Phase 1 and currently returns `404`.)
 
@@ -138,9 +143,11 @@ curl -sS https://scribo.causaprima.ai/api/v1/jurisdictions | jq
 }
 ```
 
+`payment_means` also accepts US bank details — `account_number` + `routing_number` (plus optional `bic` / `bank`) instead of `iban` — rendered on US plain-PDF invoices. XRechnung specifically requires the IBAN.
+
 ## Compliance
 
-Scribo emits invoices conforming to **EN 16931**, the European e-invoicing standard, with the relevant national CIUS. Every invoice is validated against the **Invopop**-hosted EN 16931 validator at generate-time — output that fails the rule set never reaches the user.
+Scribo emits invoices conforming to **EN 16931**, the European e-invoicing standard, with the relevant national CIUS. Every EN 16931 output (ZUGFeRD, XRechnung) is validated against the **Invopop**-hosted validator at generate-time — output that fails the rule set never reaches the user. US plain PDFs carry no EN 16931 XML and are rendered directly.
 
 **Supported formats**
 
@@ -151,7 +158,7 @@ Scribo emits invoices conforming to **EN 16931**, the European e-invoicing stand
 | United States | Plain PDF (no XML, no e-invoice claim) | ✅ Live |
 | France | **Factur-X** EN 16931 | 🔜 Coming soon |
 | Spain | **Facturae** | 🔜 Coming soon |
-| Belgium | **Peppol BIS 3.0** UBL | 🔜 Coming soon |
+| Belgium / NL / LU / AT | **Peppol BIS 3.0** UBL | 🔜 Coming soon |
 
 *Disclaimer: Scribo generates and validates compliant invoice documents. It is **not tax or legal advice** — Scribo does not determine your tax obligations, VAT treatment, or filing requirements.*
 
@@ -167,21 +174,21 @@ Yes — free forever. No credit card, no subscription, no paywall before your fi
 <details>
 <summary><strong>Do I need an account or signup?</strong></summary>
 
-No signup form. Scribo uses a magic-link login: you provide a sender email (which the invoice needs anyway), confirm via a one-time link, and you're in.
+No signup form. On your first invoice, Scribo verifies the sender email — a 6-digit code (or one-click link) arrives at that address; one verification covers ~30 minutes of invoicing. The same email doubles as your magic-link login for re-downloads later.
 
 </details>
 
 <details>
 <summary><strong>Which countries and formats are supported?</strong></summary>
 
-Live today: **Germany** — ZUGFeRD (B2B) and XRechnung (B2G) — and the **United States** (plain PDF). Coming next: **France** (Factur-X), **Spain** (Facturae), and **Belgium** (Peppol BIS 3.0).
+Live today: **Germany** — ZUGFeRD (B2B) and XRechnung (B2G) — and the **United States** (plain PDF). Coming next: **France** (Factur-X), **Spain** (Facturae), and **Belgium / NL / LU / AT** (Peppol BIS 3.0).
 
 </details>
 
 <details>
 <summary><strong>What does "EN 16931-compliant" actually mean here?</strong></summary>
 
-Every invoice is validated against the **EN 16931-1:2017** rule set (via the Invopop-hosted validator) before it's returned. Output that fails validation never reaches you.
+Every EN 16931 output (ZUGFeRD, XRechnung) is validated against the **EN 16931-1:2017** rule set (via the Invopop-hosted validator) before it's returned. Output that fails validation never reaches you. US plain PDFs carry no EN 16931 XML, so no schematron validation applies.
 
 </details>
 
@@ -222,41 +229,13 @@ Scribo is built to be operated by an agent. It ships as an **MCP server**, a **C
 
 **Other Scribo surfaces**
 
-- Skill (Claude / Codex) — [`causa-prima-scribo-skill`](https://github.com/causa-prima-ai/causa-prima-scribo-skill) · [docs](https://scribo.causaprima.ai/docs/skill)
-- MCP server — [`causa-prima-scribo-mcp`](https://github.com/causa-prima-ai/causa-prima-scribo-mcp) · [docs](https://scribo.causaprima.ai/docs/mcp)
-- CLI — [`causa-prima-scribo-cli`](https://github.com/causa-prima-ai/causa-prima-scribo-cli) · [docs](https://scribo.causaprima.ai/docs/cli)
-- HTTP API — [`causa-prima-scribo-api-docs`](https://github.com/causa-prima-ai/causa-prima-scribo-api-docs) · [docs](https://scribo.causaprima.ai/docs/api)
-- Brand hub — [`causa-prima-scribo`](https://github.com/causa-prima-ai/causa-prima-scribo)
+- Skill (Claude / Codex) — [`scribo-skill`](https://github.com/causa-prima-ai/scribo-skill) · [docs](https://scribo.causaprima.ai/docs/skill)
+- MCP server — [`scribo-mcp`](https://github.com/causa-prima-ai/scribo-mcp) · [docs](https://scribo.causaprima.ai/docs/mcp)
+- CLI — [`scribo-cli`](https://github.com/causa-prima-ai/scribo-cli) · [docs](https://scribo.causaprima.ai/docs/cli)
+- HTTP API — [`scribo-api-docs`](https://github.com/causa-prima-ai/scribo-api-docs) · [docs](https://scribo.causaprima.ai/docs/api)
+- Brand hub — [`scribo`](https://github.com/causa-prima-ai/scribo)
 
 ## License
 
 Proprietary — `UNLICENSED`. © Causa Prima Germany GmbH. All rights reserved. Distributed for use against the public Scribo API; not open-source. See [LICENSE](./LICENSE).
 
----
-
-## Previous README
-
-> **Note:** This repo's README is being migrated to Scribo's shared structure (consistent title, shared sections, and per-surface sections). The content below is the previous README, preserved verbatim — minus the header visual, which now sits at the top of this page.
-
-<details>
-<summary>Show previous README</summary>
-
-# Scribo HTTP API — documentation
-
-Public REST API documentation for [Scribo](https://github.com/causa-prima-ai/causa-prima-scribo) — free EN 16931-compliant e-invoicing (XRechnung, ZUGFeRD, Factur-X, Peppol BIS UBL, Spanish Facturae, plain US PDF) for any LLM, script, or app.
-
-> 🚧 **Status: docs in progress.** The canonical, always-current reference lives at [`scribo.causaprima.ai/docs/api`](https://scribo.causaprima.ai/docs/api). This repo will mirror it as versioned Markdown for offline use, LLM indexing, and contributions.
-
-## Other ways to use Scribo
-
-- **MCP server** (Claude Desktop, Cursor, Cline, ChatGPT App) → [`scribo-mcp`](https://github.com/causa-prima-ai/causa-prima-scribo-mcp)
-- **Skill** (Claude Code, Codex CLI) → [`scribo-skill`](https://github.com/causa-prima-ai/causa-prima-scribo-skill)
-- **CLI** (npm, planned) → [`scribo-cli`](https://github.com/causa-prima-ai/causa-prima-scribo-cli)
-- **Web app** → [scribo.causaprima.ai](https://scribo.causaprima.ai)
-- **Umbrella** → [`scribo`](https://github.com/causa-prima-ai/causa-prima-scribo)
-
-## License
-
-Proprietary — © Causa Prima Germany GmbH. All rights reserved. See [LICENSE](./LICENSE).
-
-</details>
