@@ -23,7 +23,16 @@ Just ask your AI agent about Scribo: it ships as an MCP server, a CLI, and a Cla
 
 ## What is the Scribo API?
 
-> 🚧 **Status: docs in progress.** The canonical, always-current API reference lives at [`scribo.causaprima.ai/docs/api`](https://scribo.causaprima.ai/docs/api). This repo will mirror it as versioned Markdown for offline use, LLM indexing, and contributions. See **[Previous README](#previous-readme)** below for the current surface map.
+The Scribo HTTP API is the public contract every Scribo surface is built on — the skill, MCP server, CLI, and web app all call it. `POST` an invoice payload to `/api/v1/invoices` and get back a compliant invoice (a PDF with the matching EN 16931 XML embedded) plus a durable download URL.
+
+It's anonymous and rate-limited — no signup, no API key required (optional bearer tokens unlock higher quotas for partners). The canonical OpenAPI 3.1 spec lives at [`/api/v1/openapi.json`](https://scribo.causaprima.ai/api/v1/openapi.json).
+
+> This repo is the public landing page for the API. The canonical, always-current reference is at [scribo.causaprima.ai/docs/api](https://scribo.causaprima.ai/docs/api).
+
+### Demo
+
+<!-- TODO: add demo video here -->
+_🎥 Demo video coming soon._
 
 ## Compliance
 
