@@ -1,3 +1,5 @@
+<img width="3840" height="1920" alt="A1 _ Web app" src="https://github.com/user-attachments/assets/776b0470-ad95-4988-941e-92bbae0e2943" />
+
 # Scribo HTTP API — documentation
 
 Public REST API documentation for [Scribo](https://github.com/causa-prima-ai/scribo) — free EN 16931-compliant e-invoicing (XRechnung, ZUGFeRD, Factur-X, Peppol BIS UBL, Spanish Facturae, plain US PDF) for any LLM, script, or app.
