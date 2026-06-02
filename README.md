@@ -34,6 +34,59 @@ It's anonymous and rate-limited — no signup, no API key required (optional bea
 <!-- TODO: add demo video here -->
 _🎥 Demo video coming soon._
 
+## Getting started
+
+### Quickstart
+
+Generate an invoice with a single `POST` — no key required:
+
+```sh
+curl -sS https://scribo.causaprima.ai/api/v1/invoices \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{
+    "sender": {
+      "legal_name": "Example GmbH", "country_code": "DE",
+      "address_line1": "Example Allee 1", "postcode": "10115", "city": "Berlin",
+      "tax_id": "DE123456788", "contact_email": "billing@example.com"
+    },
+    "recipient": {
+      "legal_name": "Acme GmbH", "country_code": "DE",
+      "address_line1": "Hauptstrasse 1", "postcode": "10117", "city": "Berlin",
+      "tax_id": "DE987654321"
+    },
+    "line_items": [
+      { "description": "Senior consulting, 3 days", "quantity": "3",
+        "unit_code": "DAY", "unit_price": "1200.00", "tax_rate": "19",
+        "tax_category_code": "S" }
+    ],
+    "currency": "EUR",
+    "due_date": "2026-06-01"
+  }'
+```
+
+Returns `201` with an `InvoiceRecord`, including a durable `download_url`:
+
+```json
+{
+  "invoice_id": "f0b3c1e2-...",
+  "format": "zugferd_comfort",
+  "download_url": "https://scribo.causaprima.ai/i/f0b3c1e2-.../download",
+  "validator_summary": { "valid": true, "validator": "invopop", "errors": [] },
+  "magic_link_sent": true
+}
+```
+
+Fetch the file from `download_url` — it's durable and re-downloadable any time.
+
+### Setup & prerequisites
+
+- **Base URL (production):** `https://scribo.causaprima.ai`
+- **Auth:** none — the `/api/v1/*` API is anonymous. Send `Authorization: Bearer <key>` only if you have a partner key for elevated quotas.
+- **Format:** JSON over HTTPS. Numeric fields (`quantity`, `unit_price`, `tax_rate`) are **strings** holding decimals — the API rejects floats, to preserve precision.
+- **Idempotency:** send an `Idempotency-Key` header — same key + same payload returns the original invoice, so retries are safe.
+- **Spec:** the canonical OpenAPI 3.1 document is at [`/api/v1/openapi.json`](https://scribo.causaprima.ai/api/v1/openapi.json) — generate typed clients with `openapi-typescript`, `oapi-codegen`, or any OpenAPI 3.1 tool.
+
 ## Compliance
 
 Scribo emits invoices conforming to **EN 16931**, the European e-invoicing standard, with the relevant national CIUS. Every invoice is validated against the **Invopop**-hosted EN 16931 validator at generate-time — output that fails the rule set never reaches the user.
