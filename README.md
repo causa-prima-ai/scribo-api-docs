@@ -14,4 +14,4 @@ Public REST API documentation for [Scribo](https://github.com/causa-prima-ai/scr
 
 ## License
 
-Proprietary — © Causa Prima Germany GmbH. All rights reserved. The hosted service is operated by [Causa Prima](https://causaprima.ai). See [LICENSE](./LICENSE).
+Proprietary — © Causa Prima Germany GmbH. All rights reserved. See [LICENSE](./LICENSE).
