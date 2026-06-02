@@ -87,6 +87,50 @@ Fetch the file from `download_url` — it's durable and re-downloadable any time
 - **Idempotency:** send an `Idempotency-Key` header — same key + same payload returns the original invoice, so retries are safe.
 - **Spec:** the canonical OpenAPI 3.1 document is at [`/api/v1/openapi.json`](https://scribo.causaprima.ai/api/v1/openapi.json) — generate typed clients with `openapi-typescript`, `oapi-codegen`, or any OpenAPI 3.1 tool.
 
+## Usage
+
+### How it works
+
+Four endpoints under `/api/v1/*`:
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/invoices` | Generate a compliant invoice; returns an `InvoiceRecord` with a durable `download_url`. |
+| `GET` | `/api/v1/invoices/{id}/download` | Stream the invoice file bytes. |
+| `GET` | `/api/v1/jurisdictions` | List supported jurisdictions and their formats. |
+| `GET` | `/api/v1/openapi.json` | The canonical OpenAPI 3.1 document. |
+
+The output format is chosen by a deterministic priority chain (e.g. a `recipient.leitweg_id` selects German XRechnung); see [jurisdictions](https://scribo.causaprima.ai/docs/jurisdictions). To re-download, use the `download_url` from the create response as-is — it's durable. (A metadata re-fetch at `GET /api/v1/invoices/{id}` is deferred in Phase 1 and currently returns `404`.)
+
+**Errors** share one envelope:
+
+```json
+{ "error": { "code": "rate_limited", "message": "Rate limit exceeded", "details": {} } }
+```
+
+**Rate limits** (per source IP / sender tenant): 600 req/min and 200 invoices/hour per IP; 5 invoices/min and 50 per 24h per sender. `429` responses carry `retry_after_seconds`, `reset_at`, and `limit_code`. Full error reference: [troubleshooting](https://scribo.causaprima.ai/docs/troubleshooting).
+
+### Examples
+
+**Check supported jurisdictions**
+
+```sh
+curl -sS https://scribo.causaprima.ai/api/v1/jurisdictions | jq
+```
+
+**German B2G XRechnung** — add a `leitweg_id` to the recipient (auto-selects XRechnung) and a `payment_means` block (required by XRechnung BR-DE-1). The rest of the payload matches the [Quickstart](#quickstart):
+
+```json
+"recipient": {
+  "legal_name": "Bundesamt für Beispiele", "country_code": "DE",
+  "address_line1": "Wilhelmstr. 1", "postcode": "10117", "city": "Berlin",
+  "leitweg_id": "991-12345-67"
+},
+"payment_means": {
+  "type": "credit_transfer", "iban": "DE89370400440532013000", "account_name": "Acme GmbH"
+}
+```
+
 ## Compliance
 
 Scribo emits invoices conforming to **EN 16931**, the European e-invoicing standard, with the relevant national CIUS. Every invoice is validated against the **Invopop**-hosted EN 16931 validator at generate-time — output that fails the rule set never reaches the user.
