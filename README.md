@@ -7,6 +7,13 @@
 
 - [What is Scribo?](#what-is-scribo)
 - [What is the Scribo API?](#what-is-the-scribo-api)
+  - [Demo](#demo)
+- [Getting started](#getting-started)
+  - [Quickstart](#quickstart)
+  - [Setup & prerequisites](#setup--prerequisites)
+- [Usage](#usage)
+  - [How it works](#how-it-works)
+  - [Examples](#examples)
 - [Compliance](#compliance)
 - [FAQ](#faq)
 - [Resources](#resources)
