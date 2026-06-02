@@ -1,4 +1,4 @@
-<img width="3840" height="1920" alt="A1 _ Web app" src="https://github.com/user-attachments/assets/776b0470-ad95-4988-941e-92bbae0e2943" />
+<img width="3840" height="1920" alt="API _ one call _ invoice (1)" src="https://github.com/user-attachments/assets/9117c89d-6996-4d1d-a257-5a7917d10a12" />
 
 # Scribo HTTP API — documentation
 
