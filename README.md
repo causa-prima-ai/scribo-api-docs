@@ -35,11 +35,6 @@ It's anonymous and rate-limited — no signup, no API key required (optional bea
 
 > This repo is the public landing page for the API. The canonical, always-current reference is at [scribo.causaprima.ai/docs/api](https://scribo.causaprima.ai/docs/api).
 
-### Demo
-
-<!-- TODO: add demo video here -->
-_🎥 Demo video coming soon._
-
 ## Getting started
 
 ### Quickstart
