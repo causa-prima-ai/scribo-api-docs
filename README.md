@@ -25,15 +25,15 @@ Scribo is a free, conversational e-invoicing tool. Describe an invoice in plain 
 
 Just ask your AI agent about Scribo: it ships as an MCP server, a CLI, and a Claude/Codex skill, alongside a public HTTP API and a web app. Free forever — no credit card. You just need a sender email.
 
-**Built by Causa Prima** — Scribo is built by [**Causa Prima**](https://causaprima.ai/), a company building agentic AI for the CFO office. It's our first freely available skill — an early glimpse of what we're building.
+**Built by Causa Prima** — Scribo is built by [**Causa Prima**](https://causaprima.com/), a company building agentic AI for the CFO office. It's our first freely available skill — an early glimpse of what we're building.
 
 ## What is the Scribo API?
 
 The Scribo HTTP API is the public contract every Scribo surface is built on — the skill, MCP server, CLI, and web app all call it. `POST` an invoice payload to `/api/v1/invoices` and get back a compliant invoice (a PDF with the matching EN 16931 XML embedded) plus a durable download URL.
 
-It's anonymous and rate-limited — no signup, no API key required (optional bearer tokens unlock higher quotas for partners). The canonical OpenAPI 3.1 spec lives at [`/api/v1/openapi.json`](https://scribo.causaprima.ai/api/v1/openapi.json).
+It's anonymous and rate-limited — no signup, no API key required (optional bearer tokens unlock higher quotas for partners). The canonical OpenAPI 3.1 spec lives at [`/api/v1/openapi.json`](https://scribo.causaprima.com/api/v1/openapi.json).
 
-> This repo is the public landing page for the API. The canonical, always-current reference is at [scribo.causaprima.ai/docs/api](https://scribo.causaprima.ai/docs/api).
+> This repo is the public landing page for the API. The canonical, always-current reference is at [scribo.causaprima.com/docs/api](https://scribo.causaprima.com/docs/api).
 
 ## Getting started
 
@@ -42,7 +42,7 @@ It's anonymous and rate-limited — no signup, no API key required (optional bea
 Generate an invoice with a single `POST` — no key required. (First invoice for a sender email? Verify it first — see [the verification step](#setup--prerequisites) below.)
 
 ```sh
-curl -sS https://scribo.causaprima.ai/api/v1/invoices \
+curl -sS https://scribo.causaprima.com/api/v1/invoices \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -H "X-Email-Verification-Token: $TOKEN" \
@@ -73,7 +73,7 @@ Returns `201` with an `InvoiceRecord`, including a durable `download_url`:
 {
   "invoice_id": "f0b3c1e2-...",
   "format": "zugferd_comfort",
-  "download_url": "https://scribo.causaprima.ai/i/f0b3c1e2-.../download",
+  "download_url": "https://scribo.causaprima.com/i/f0b3c1e2-.../download",
   "validator_summary": { "valid": true, "validator": "invopop", "errors": [] },
   "magic_link_sent": true
 }
@@ -83,12 +83,12 @@ Fetch the file from `download_url` — it's durable and re-downloadable any time
 
 ### Setup & prerequisites
 
-- **Base URL (production):** `https://scribo.causaprima.ai`
+- **Base URL (production):** `https://scribo.causaprima.com`
 - **Auth:** none — the `/api/v1/*` API is anonymous. Send `Authorization: Bearer <key>` only if you have a partner key for elevated quotas.
 - **Verification (first invoice per sender):** the first invoice for each sender email must prove address ownership, or `POST /invoices` returns `401 email_verification_required`. Request a challenge (`POST /api/v1/scribo/email-verifications` with `{ "email": … }` — Scribo emails a 6-character code), redeem it (`POST …/{id}/redeem` with `{ "code": … }` → `{ verification_token }`), then send the token as `X-Email-Verification-Token`. One token covers ~30 minutes of invoices for that sender.
 - **Format:** JSON over HTTPS. Numeric fields (`quantity`, `unit_price`, `tax_rate`) are **strings** holding decimals — the API rejects floats, to preserve precision.
 - **Idempotency:** send an `Idempotency-Key` header — same key + same payload returns the original invoice, so retries are safe.
-- **Spec:** the canonical OpenAPI 3.1 document is at [`/api/v1/openapi.json`](https://scribo.causaprima.ai/api/v1/openapi.json) — generate typed clients with `openapi-typescript`, `oapi-codegen`, or any OpenAPI 3.1 tool.
+- **Spec:** the canonical OpenAPI 3.1 document is at [`/api/v1/openapi.json`](https://scribo.causaprima.com/api/v1/openapi.json) — generate typed clients with `openapi-typescript`, `oapi-codegen`, or any OpenAPI 3.1 tool.
 
 ## Usage
 
@@ -107,7 +107,7 @@ Eight endpoints under `/api/v1/*`:
 | `GET` | `/api/v1/scribo/email-verifications/{id}` | Challenge status snapshot (polling fallback). |
 | `GET` | `/api/v1/scribo/email-verifications/{id}/events` | SSE stream of challenge events. |
 
-The output format is chosen by a deterministic priority chain (e.g. a `recipient.leitweg_id` selects German XRechnung); see [jurisdictions](https://scribo.causaprima.ai/docs/jurisdictions). To re-download, use the `download_url` from the create response as-is — it's durable. (A metadata re-fetch at `GET /api/v1/invoices/{id}` is deferred in Phase 1 and currently returns `404`.)
+The output format is chosen by a deterministic priority chain (e.g. a `recipient.leitweg_id` selects German XRechnung); see [jurisdictions](https://scribo.causaprima.com/docs/jurisdictions). To re-download, use the `download_url` from the create response as-is — it's durable. (A metadata re-fetch at `GET /api/v1/invoices/{id}` is deferred in Phase 1 and currently returns `404`.)
 
 **Errors** share one envelope:
 
@@ -115,14 +115,14 @@ The output format is chosen by a deterministic priority chain (e.g. a `recipient
 { "error": { "code": "rate_limited", "message": "Rate limit exceeded", "details": {} } }
 ```
 
-**Rate limits** (per source IP / sender tenant): 600 req/min and 200 invoices/hour per IP; 5 invoices/min and 50 per 24h per sender. `429` responses carry `retry_after_seconds`, `reset_at`, and `limit_code`. Full error reference: [troubleshooting](https://scribo.causaprima.ai/docs/troubleshooting).
+**Rate limits** (per source IP / sender tenant): 600 req/min and 200 invoices/hour per IP; 5 invoices/min and 50 per 24h per sender. `429` responses carry `retry_after_seconds`, `reset_at`, and `limit_code`. Full error reference: [troubleshooting](https://scribo.causaprima.com/docs/troubleshooting).
 
 ### Examples
 
 **Check supported jurisdictions**
 
 ```sh
-curl -sS https://scribo.causaprima.ai/api/v1/jurisdictions | jq
+curl -sS https://scribo.causaprima.com/api/v1/jurisdictions | jq
 ```
 
 **German B2G XRechnung** — add a `leitweg_id` to the recipient (auto-selects XRechnung) and a `payment_means` block (required by XRechnung BR-DE-1). The rest of the payload matches the [Quickstart](#quickstart):
@@ -211,23 +211,23 @@ Scribo is built to be operated by an agent. It ships as an **MCP server**, a **C
 <details>
 <summary><strong>Who builds Scribo?</strong></summary>
 
-[Causa Prima](https://causaprima.ai/) — a company building agentic AI for the CFO office. Operated by Causa Prima Germany GmbH, Munich.
+[Causa Prima](https://causaprima.com/) — a company building agentic AI for the CFO office. Operated by Causa Prima Germany GmbH, Munich.
 
 </details>
 
 ## Resources
 
-- **Web app** — [scribo.causaprima.ai](https://scribo.causaprima.ai)
-- **Documentation** — [scribo.causaprima.ai/docs](https://scribo.causaprima.ai/docs)
-- **Compliance & trust** — [scribo.causaprima.ai/compliance](https://scribo.causaprima.ai/compliance)
-- **Causa Prima** — [causaprima.ai](https://causaprima.ai)
+- **Web app** — [scribo.causaprima.com](https://scribo.causaprima.com)
+- **Documentation** — [scribo.causaprima.com/docs](https://scribo.causaprima.com/docs)
+- **Compliance & trust** — [scribo.causaprima.com/compliance](https://scribo.causaprima.com/compliance)
+- **Causa Prima** — [causaprima.com](https://causaprima.com)
 
 **Other Scribo surfaces**
 
-- Skill (Claude / Codex) — [`scribo-skill`](https://github.com/causa-prima-ai/scribo-skill) · [docs](https://scribo.causaprima.ai/docs/skill)
-- MCP server — [`scribo-mcp`](https://github.com/causa-prima-ai/scribo-mcp) · [docs](https://scribo.causaprima.ai/docs/mcp)
-- CLI — [`scribo-cli`](https://github.com/causa-prima-ai/scribo-cli) · [docs](https://scribo.causaprima.ai/docs/cli)
-- HTTP API — [`scribo-api-docs`](https://github.com/causa-prima-ai/scribo-api-docs) · [docs](https://scribo.causaprima.ai/docs/api)
+- Skill (Claude / Codex) — [`scribo-skill`](https://github.com/causa-prima-ai/scribo-skill) · [docs](https://scribo.causaprima.com/docs/skill)
+- MCP server — [`scribo-mcp`](https://github.com/causa-prima-ai/scribo-mcp) · [docs](https://scribo.causaprima.com/docs/mcp)
+- CLI — [`scribo-cli`](https://github.com/causa-prima-ai/scribo-cli) · [docs](https://scribo.causaprima.com/docs/cli)
+- HTTP API — [`scribo-api-docs`](https://github.com/causa-prima-ai/scribo-api-docs) · [docs](https://scribo.causaprima.com/docs/api)
 - Brand hub — [`scribo`](https://github.com/causa-prima-ai/scribo)
 
 ## License
